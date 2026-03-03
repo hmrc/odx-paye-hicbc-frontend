@@ -1,0 +1,96 @@
+{
+  "name": "HMRC_ODX_GDSAssignmentLink",
+  "label": "GDS Assignment Link",
+  "description": "Assignment Link to add prefix and suffix labels",
+  "organization": "HMRC",
+  "version": "0.0.1",
+  "library": "ODX",
+  "allowedApplications": [],
+  "componentKey": "HMRC_ODX_GDSAssignmentLink",
+  "type": "Field",
+  "subtype": "Text",
+  "icon": "images/pz-url-active.svg",
+   "properties": [
+    {
+      "name": "value",
+      "label": "Value",
+      "format": "TEXT"
+    },
+    {
+      "name": "label",
+      "label": "Label",
+      "format": "TEXT"
+    },
+    {
+      "name": "prefixLabel",
+      "label": "Prefix (Label)",
+      "format": "TEXT",
+      "required": false
+    },
+    {
+      "name": "suffixLabel",
+      "label": "Suffix (Label)",
+      "format": "TEXT",
+      "required": false
+    },
+    {
+      "name": "DPageName",
+      "label": "DPageName",
+      "format": "TEXT",
+      "required": false,
+      "visibility": "(linkAction = 'D_PAGE_FOR_BPP')"
+    },
+    {
+      "name": "valueType",
+      "label": "Display Type",
+      "format": "SELECT",
+      "defaultValue": "1",
+      "source": [
+        { "key": "1", "value": "Link" },
+        { "key": "2", "value": "Date" },
+        { "key": "3", "value": "Reference No" }
+      ]
+    },
+    {
+      "name": "linkAction",
+      "label": "Link action",
+      "format": "SELECT",
+      "defaultValue": "1",
+      "source": [
+        { "key": "NAVIGATE_TO_STEP", "value": "Navigate to Step" },
+        { "key": "FINISH_ASSIGNMENT", "value": "Finish Assignment" },
+        { "key": "D_PAGE_FOR_BPP", "value": "D-page call for BPP" }
+      ]
+    },
+    {
+      "name": "placeholder",
+      "label": "Placeholder",
+      "format": "TEXT"
+    },
+    {
+      "name": "visibility",
+      "label": "Visible",
+      "format": "VISIBILITY"
+    },
+    {
+      "name": "disabled",
+      "label": "Disabled",
+      "format": "DISABLED"
+    },
+    {
+      "name": "required",
+      "label": "Required",
+      "format": "REQUIRED"
+    },
+    {
+      "name": "stepId",
+      "label": "Step ID (Navigation)",
+      "format": "TEXT"
+    }
+  ],
+  "defaultConfig": {
+    "label": "@L $this.label",
+    "valueType": "1",
+    "linkAction": "1"
+  }
+}

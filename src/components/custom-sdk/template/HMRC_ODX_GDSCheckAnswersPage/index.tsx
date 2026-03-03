@@ -1,0 +1,209 @@
+import React, { useRef, useEffect, useState } from 'react';
+import { getInstructions } from './utils';
+import type { PConnProps } from '@pega/react-sdk-components/lib/types/PConnProps';
+import './DefaultForm.css';
+import StyledHmrcOdxGdsCheckAnswersPageWrapper from './styles';
+
+declare const PCore;
+
+interface HmrcOdxGdsCheckAnswersPageProps extends PConnProps {
+  // If any, enter additional props that only exist on this componentName
+  NumCols?: string;
+  instructions?: string;
+  // eslint-disable-next-line react/no-unused-prop-types
+  children: any[];
+}
+
+// props passed in combination of props from property panel (config.json) and run time props from Constellation
+export default function HmrcOdxGdsCheckAnswersPage(props: HmrcOdxGdsCheckAnswersPageProps) {
+  // template structure setup
+  const { getPConnect, NumCols = '1' } = props;
+  const instructions = getInstructions(getPConnect(), props.instructions);
+  const [key, setKey] = useState(1);
+
+  let divClass: string;
+
+  const numCols = NumCols || '1';
+  switch (numCols) {
+    case '1':
+      divClass = 'psdk-default-form-one-column';
+      break;
+    case '2':
+      divClass = 'psdk-default-form-two-column';
+      break;
+    case '3':
+      divClass = 'psdk-default-form-three-column';
+      break;
+    default:
+      divClass = 'psdk-default-form-one-column';
+      break;
+  }
+
+  const arChildren = getPConnect().getChildren()[0].getPConnect().getChildren();
+  const dfChildren = arChildren.map((kid, idx) => {
+    kid.key = idx;
+    // @ts-ignore
+    return getPConnect().createComponent(kid.getPConnect().getRawMetadata());
+  });
+
+  // Create a ref to the mainer rendering container
+  const dfChildrenContainerRef = useRef(null);
+
+  const pConn = getPConnect();
+  // const actions = pConn.getActionsApi();
+  const containerItemID = pConn.getContextName();
+
+  async function navigateToStep(event: MouseEvent, stepId: string) {
+    event.preventDefault();
+    const initialValue = '';
+    const isImplicit = false;
+    // resetting Back button control on click of 'Change'
+    sessionStorage.setItem('overrideControl', 'false');
+    getPConnect().setValue('.NextStep', stepId, initialValue, isImplicit);
+    getPConnect().getActionsApi().finishAssignment(containerItemID);
+  }
+
+  function updateHTML(htmlContent) {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(htmlContent, 'text/html');
+    const summaryListRows = doc.querySelectorAll('div.govuk-summary-list__row, h2, p, ul');
+
+    const fragment = document.createDocumentFragment();
+    let openDL = false;
+    let currentDL;
+
+    const processCSVNodes = (elem: HTMLElement) => {
+      const csvItems = elem.textContent.split(',');
+      if (csvItems.length > 1) {
+        elem.innerHTML = '';
+        csvItems.forEach(item => {
+          const textNode = document.createTextNode(item.trim());
+          elem.appendChild(textNode);
+          elem.appendChild(document.createElement('br'));
+        });
+      }
+    };
+
+    summaryListRows?.forEach(elem => {
+      const tagname = elem.tagName.toLowerCase();
+      switch (tagname) {
+        case 'h1':
+        case 'h2':
+        case 'h3':
+        case 'p':
+        case 'ul':
+          if (openDL) {
+            fragment.appendChild(currentDL);
+            openDL = false;
+          }
+
+          fragment.appendChild(elem.cloneNode(true));
+          break;
+
+        case 'div': {
+          const isCsV = (elem.children[1] as HTMLElement).dataset.isCsv;
+          if (isCsV === 'true') {
+            processCSVNodes(elem.children[1] as HTMLElement);
+          }
+
+          if (!openDL) {
+            openDL = true;
+            currentDL = document.createElement('dl');
+            currentDL.className = 'govuk-summary-list';
+          }
+
+          currentDL.appendChild(elem.cloneNode(true));
+          break;
+        }
+
+        default:
+          break;
+      }
+    });
+
+    if (openDL) {
+      fragment.appendChild(currentDL);
+    }
+
+    // Manually copy onClick handlers from React components to their clones
+    // const originalLinks = Array.from(summaryListRows);
+    fragment.querySelectorAll('a').forEach(cloneLink => {
+      const originalLink = cloneLink;
+      if (originalLink) {
+        const stepId = originalLink.getAttribute('data-step-id');
+        cloneLink.addEventListener('click', event => navigateToStep(event, stepId));
+      }
+    });
+
+    if (dfChildrenContainerRef.current) {
+      // Clear existing content
+      dfChildrenContainerRef.current.innerHTML = '';
+      // Append the new content
+      dfChildrenContainerRef.current.appendChild(fragment);
+    }
+  }
+
+  // eslint-disable-next-line sonarjs/cognitive-complexity
+  useEffect(() => {
+    if (dfChildrenContainerRef.current) {
+      const checkChildren = () => {
+        const container = dfChildrenContainerRef.current;
+        const summaryListElement = container?.querySelector('.govuk-summary-list');
+
+        if (summaryListElement) {
+          let htmlContent = '';
+          Array.from(container.children).forEach(child => {
+            if (child instanceof HTMLElement) {
+              const tagName = child.tagName.toLowerCase();
+              if (tagName === 'h2' || tagName === 'h3' || tagName === 'p' || tagName === 'ul') {
+                if (tagName === 'p') {
+                  child.setAttribute('class', 'govuk-body');
+                }
+                htmlContent += child.outerHTML;
+              } else {
+                htmlContent += child.innerHTML;
+              }
+            }
+          });
+
+          updateHTML(htmlContent);
+        } else {
+          // Retry until a child with the class "govuk-summary-list" is rendered
+          requestAnimationFrame(checkChildren);
+        }
+      };
+      // Added timeout to fix rendering issue, will remove this once enhancement story related to autocomplete value implemented
+      setTimeout(() => {
+        checkChildren();
+      }, 500);
+    }
+  }, [dfChildren]);
+
+  // to force refresh the view
+  async function refreshView() {
+    setKey(previousKey => previousKey + 1);
+  }
+
+  useEffect(() => {
+    PCore.getPubSubUtils().subscribe('forceRefreshRootComponent', refreshView, 'forceRefreshRootComponent');
+
+    return () => PCore.getPubSubUtils().unsubscribe('forceRefreshRootComponent', 'forceRefreshRootComponent');
+  }, [getPConnect]);
+
+  return (
+    <StyledHmrcOdxGdsCheckAnswersPageWrapper key={key}>
+      <>
+        {instructions && (
+          <div className='psdk-default-form-instruction-text'>
+            {/* server performs sanitization method for instructions html content */}
+            {/* eslint-disable react/no-danger */}
+            <div key='instructions' dangerouslySetInnerHTML={{ __html: instructions }} />
+          </div>
+        )}
+        <div ref={dfChildrenContainerRef} className={divClass}>
+          <div className='govuk-visually-hidden'>{dfChildren}</div>
+        </div>
+      </>
+    </StyledHmrcOdxGdsCheckAnswersPageWrapper>
+  );
+}
