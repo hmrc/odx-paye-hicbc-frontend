@@ -1,0 +1,15 @@
+{
+    "label": "SimpleTable",
+    "componentKey": "SimpleTable",
+    "name": "SimpleTable",
+    "description": "Datatype List Template",
+    "type": "Template",
+    "subtype": "DATAVIEW",
+    "properties": [
+        {
+            "format": "BOOLEAN",
+            "name": "IsSummaryList",
+            "label": "Display as Summary List"
+        }
+    ]
+}
